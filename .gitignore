@@ -1,0 +1,4 @@
+.env
+spend.json
+__pycache__/
+*.pyc
