@@ -6,23 +6,107 @@
       "heading": "Notifications",
       "exclusive": false,
       "roles": [
-        {"name": "Announcements", "emoji": "📣", "about": "Get pinged for big news."},
-        {"name": "Devlog", "emoji": "📜", "about": "Get pinged when a new devlog goes up."}
+        {
+          "name": "Announcements",
+          "emoji": "📣",
+          "about": "Get pinged for big news."
+        },
+        {
+          "name": "Devlog",
+          "emoji": "📜",
+          "about": "Get pinged when a new devlog goes up."
+        }
       ]
     },
     {
       "heading": "Your element",
-      "intro": "Pick the element you're drawn to. One at a time - picking another swaps it.",
+      "intro": "Pick the one element you're drawn to - picking another swaps it.",
       "exclusive": true,
+      "set": "element",
       "roles": [
-        {"name": "Air", "emoji": "🌪️"},
-        {"name": "Fire", "emoji": "🔥"},
-        {"name": "Earth", "emoji": "🪨"},
-        {"name": "Water", "emoji": "🌊"},
-        {"name": "Light", "emoji": "☀️"},
-        {"name": "Dark", "emoji": "🌑"},
-        {"name": "Aether", "emoji": "✨"}
-      ]
+        {
+          "name": "Air",
+          "emoji": "🌪️",
+          "color": "A8D8E8"
+        },
+        {
+          "name": "Fire",
+          "emoji": "🔥",
+          "color": "E8572A"
+        },
+        {
+          "name": "Earth",
+          "emoji": "🪨",
+          "color": "9C7A4E"
+        },
+        {
+          "name": "Water",
+          "emoji": "🌊",
+          "color": "2E86C1"
+        }
+      ],
+      "label": "Primary"
+    },
+    {
+      "heading": "",
+      "exclusive": true,
+      "set": "element",
+      "roles": [
+        {
+          "name": "Ice",
+          "emoji": "🧊",
+          "color": "9FE2F5"
+        },
+        {
+          "name": "Lightning",
+          "emoji": "⚡",
+          "color": "F4D03F"
+        },
+        {
+          "name": "Steam",
+          "emoji": "♨️",
+          "color": "C9CED6"
+        },
+        {
+          "name": "Dust",
+          "emoji": "🏜️",
+          "color": "D4B483"
+        },
+        {
+          "name": "Metal",
+          "emoji": "⚙️",
+          "color": "8E9AA6"
+        },
+        {
+          "name": "Bio",
+          "emoji": "🌿",
+          "color": "58B35A"
+        }
+      ],
+      "label": "Secondary"
+    },
+    {
+      "heading": "",
+      "exclusive": true,
+      "set": "element",
+      "roles": [
+        {
+          "name": "Light",
+          "emoji": "☀️",
+          "color": "FFF2B3"
+        },
+        {
+          "name": "Dark",
+          "emoji": "🌑",
+          "color": "5B3F8C"
+        },
+        {
+          "name": "Aether",
+          "emoji": "✨",
+          "color": "B794F6"
+        }
+      ],
+      "label": "Special"
     }
   ]
 }

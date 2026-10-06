@@ -253,8 +253,10 @@ async def post_rules(message: discord.Message, me: discord.ClientUser) -> None:
 # -------------------------------------------------------------------------------------------------------------- role menu
 
 def _load_roles():
-    """knowledge/roles.json: {"title", "intro", "groups": [{"heading", "intro", "exclusive", "roles": [{"name", "emoji",
-    "about"}]}]}. An EXCLUSIVE group lets a member hold one of its roles at a time (picking another swaps)."""
+    """knowledge/roles.json: {"title", "intro", "groups": [{"heading", "intro", "exclusive", "set", "roles": [{"name",
+    "emoji", "about", "color"}], "label"}]}. An EXCLUSIVE group lets a member hold one of its roles at a time (picking another
+    swaps); exclusive groups sharing a "set" name count as ONE group (the element tiers). "color" (hex) is given to a role
+    Spirekeeper creates, or to an existing one that has no colour yet - never over a colour you chose."""
     config = json.loads((HERE / "knowledge" / "roles.json").read_text(encoding="utf-8"))
     if "groups" not in config:   # the first version's flat list
         config["groups"] = [{"heading": "", "exclusive": False, "roles": config.get("roles", [])}]
@@ -296,7 +298,8 @@ class RoleButton(discord.ui.DynamicItem[discord.ui.Button], template=r"kaleida-r
                 return
             swapped = []
             if group.get("exclusive"):
-                names = {r.get("name") for r in group.get("roles", [])} - {role.name}
+                linked = [g for g in config["groups"] if g is group or (group.get("set") and g.get("set") == group.get("set"))]
+                names = {r.get("name") for g in linked for r in g.get("roles", [])} - {role.name}
                 swapped = [r for r in member.roles if r.name in names]
                 if swapped:
                     await member.remove_roles(*swapped, reason="Role menu (one per group)")
@@ -315,14 +318,26 @@ async def post_roles(message: discord.Message, me: discord.ClientUser) -> None:
         return
     config = _load_roles()
     view = discord.ui.View(timeout=None)
-    sections, problems, buttons, row = [], [], 0, 0
+    sections, problems, created, buttons, row = [], [], [], 0, 0
     for group in config["groups"]:
         lines, row_used = [], 0
         for entry in group.get("roles", []):
             role = discord.utils.get(message.guild.roles, name=entry.get("name"))
+            colour = discord.Colour(int(entry["color"], 16)) if entry.get("color") else discord.Colour.default()
             if role is None:
-                problems.append(f"no role named **{entry.get('name')}**")
-                continue
+                # A missing menu role is created DISPLAY-ONLY: no permissions at all, so it can never grant anything.
+                try:
+                    role = await message.guild.create_role(name=entry.get("name"), permissions=discord.Permissions.none(),
+                                                           colour=colour, reason="Role menu (Spirekeeper)")
+                    created.append(role.name)
+                except discord.Forbidden:
+                    problems.append(f"no role named **{entry.get('name')}** (and I lack Manage Roles to create it)")
+                    continue
+            elif entry.get("color") and role.colour.value == 0 and not _is_dangerous(role):
+                try:
+                    await role.edit(colour=colour, reason="Role menu colour (Spirekeeper)")
+                except discord.Forbidden:
+                    pass
             if _is_dangerous(role):
                 problems.append(f"**{role.name}** has moderator powers - never self-assignable")
                 continue
@@ -343,7 +358,8 @@ async def post_roles(message: discord.Message, me: discord.ClientUser) -> None:
         if lines:
             head = f"**{group['heading']}**\n" if group.get("heading") else ""
             intro = unwrap(group.get("intro", "")).strip()
-            sections.append(head + (intro + "\n" if intro else "") + "\n".join(l.strip() for l in lines))
+            label = f"*{group['label']}*\n" if group.get("label") else ""   # a small tier label above the buttons' list
+            sections.append(head + (intro + "\n" if intro else "") + label + "\n".join(l.strip() for l in lines))
             row += 1
     if not sections:
         await message.reply("No usable roles in knowledge/roles.json: " + "; ".join(problems), mention_author=False)
@@ -358,6 +374,8 @@ async def post_roles(message: discord.Message, me: discord.ClientUser) -> None:
     else:
         new = await channel.send(embed=embed, view=view)
         done = f"Posted the role menu: {new.jump_url}"
+    if created:
+        done += "\nCreated (display-only, no permissions): " + ", ".join(created)
     if problems:
         done += "\nSkipped: " + "; ".join(problems)
     await message.reply(done, mention_author=False)
