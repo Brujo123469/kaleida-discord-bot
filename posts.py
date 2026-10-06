@@ -35,9 +35,12 @@ RULES_CHANNEL = os.getenv("RULES_CHANNEL", "welcome-and-rules")
 ROLES_CHANNEL = os.getenv("ROLES_CHANNEL", "roles")
 WELCOME_CHANNEL = os.getenv("WELCOME_CHANNEL", "general")
 
+# The opt-in ping role for each kind (from the role menu). A post pings ONLY its own role, never @everyone.
+# Empty = no ping. The role needs "Allow anyone to @mention this role" on, or Spirekeeper needs "Mention @everyone".
 KINDS = {
-    "announcement": {"channel": ANNOUNCE_CHANNEL, "footer": "Kaleida - announcement"},
-    "devlog": {"channel": DEVLOG_CHANNEL, "footer": "Kaleida - devlog"},
+    "announcement": {"channel": ANNOUNCE_CHANNEL, "footer": "Kaleida - announcement",
+                     "ping": os.getenv("ANNOUNCE_PING_ROLE", "Announcements")},
+    "devlog": {"channel": DEVLOG_CHANNEL, "footer": "Kaleida - devlog", "ping": os.getenv("DEVLOG_PING_ROLE", "Devlog")},
 }
 DRAFT_FOOTER = "DRAFT - only staff can see this. Post, Edit or Cancel below."
 RULES_TITLE = "Server rules"
@@ -101,8 +104,11 @@ class PostButton(discord.ui.DynamicItem[discord.ui.Button], template=r"kaleida-p
         image = _first_image(draft.attachments)
         if image:
             embed.set_image(url=f"attachment://{image.filename}")
+        ping = discord.utils.get(interaction.guild.roles, name=spec["ping"]) if spec.get("ping") else None
         try:
-            posted = await target.send(embed=embed, files=files, allowed_mentions=discord.AllowedMentions.none())
+            posted = await target.send(content=ping.mention if ping else None, embed=embed, files=files,
+                                       allowed_mentions=discord.AllowedMentions(everyone=False, users=False,
+                                                                                roles=[ping] if ping else False))
         except discord.Forbidden:
             await interaction.followup.send(f"I'm not allowed to post in {target.mention}.", ephemeral=True)
             return

@@ -30,7 +30,8 @@ Every public post is either fixed text you wrote or a draft you approved. Claude
 lines are fine - and attach images or clips to the same message. Best typed in `#mod-queue`; typed anywhere else, the bot
 deletes your command so the notes don't sit in public. Spirekeeper tidies the notes into a clean post (one Claude call,
 about 1-2 cents; it may not add any fact you didn't write) and puts a **preview** in `#mod-queue` with three buttons:
-- **Post** - publishes it to `#announcements` (or `#devlog`) with your images re-attached;
+- **Post** - publishes it to `#announcements` (or `#devlog`) with your images re-attached, pinging only the members who
+  opted in through the role menu (the **Announcements** / **Devlog** roles - never @everyone);
 - **Edit** - opens a box with the title and text so you can change anything, then Post;
 - **Cancel** - drops it.
 
@@ -52,7 +53,8 @@ Do step 1 first: with the variable on and the switch off, Discord refuses the bo
 `knowledge/welcome.md` (`{member}` = the newcomer, `{rules}` = the rules channel).
 
 **What the bot needs for posting** (Server Settings -> Roles -> Spirekeeper): **Attach Files** and **Manage Roles** on top
-of the original six, and the Spirekeeper role dragged **above** every role in the menu. Channels: `#announcements`,
+of the original six; for the pings, either switch on **Allow anyone to @mention this role** on the Announcements and Devlog
+roles, or give Spirekeeper **Mention @everyone, @here and All Roles** (it still never pings @everyone); and the Spirekeeper role dragged **above** every role in the menu. Channels: `#announcements`,
 `#devlog`, `#roles`, `#welcome-and-rules` (Spirekeeper needs Send Messages there - members don't). Other names can be set
 in the variables (`.env.example`).
 
