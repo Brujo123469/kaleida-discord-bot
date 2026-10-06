@@ -9,6 +9,8 @@ DRAFT you approve: nothing written by Claude goes public until a staff member pr
     earlier one in place (run it again after editing the file).
   * Role menu - "!kaleida post roles" posts buttons from knowledge/roles.json; members tap to add / remove a role.
     Only roles listed there, and never a role with moderator powers.
+  * About AI page - "!kaleida post ai" posts knowledge/ai.md in the about channel (or edits its earlier one). Refused
+    while the file still holds a "[Khai: ...]" placeholder.
   * Welcome - a short message from knowledge/welcome.md when someone joins (needs WELCOME_ON_JOIN=1, see README).
 
 Every button here is a "dynamic item": its meaning lives in its custom id, so the buttons keep working after a restart.
@@ -23,7 +25,7 @@ import datetime
 
 import discord
 
-from util import BRAND_COLOR, find_channel, is_staff, unwrap
+from util import BRAND_COLOR, find_channel, is_staff, link_channels, unwrap
 
 log = logging.getLogger("kaleida.posts")
 HERE = pathlib.Path(__file__).parent
@@ -33,6 +35,7 @@ DEVLOG_CHANNEL = os.getenv("DEVLOG_CHANNEL", "devlog")
 DRAFTS_CHANNEL = os.getenv("DRAFTS_CHANNEL", os.getenv("MOD_QUEUE_CHANNEL", "mod-queue"))
 RULES_CHANNEL = os.getenv("RULES_CHANNEL", "welcome-and-rules")
 ROLES_CHANNEL = os.getenv("ROLES_CHANNEL", "roles")
+ABOUT_CHANNEL = os.getenv("ABOUT_CHANNEL", "about")
 WELCOME_CHANNEL = os.getenv("WELCOME_CHANNEL", "general")
 
 # The opt-in ping role for each kind (from the role menu). A post pings ONLY its own role, never @everyone.
@@ -240,7 +243,7 @@ async def post_rules(message: discord.Message, me: discord.ClientUser) -> None:
     text = (HERE / "knowledge" / "rules.md").read_text(encoding="utf-8")
     text = re.sub(r"^#\s.*\n+", "", text)   # the file's own heading becomes the post title
     text = unwrap(text)                      # one line per rule: Discord shows every line break
-    embed = _post_embed(RULES_TITLE, text.strip(), "Kaleida - read these before posting")
+    embed = _post_embed(RULES_TITLE, link_channels(message.guild, text.strip()), "Kaleida - read these before posting")
     old = await _own_post(channel, RULES_TITLE, me)
     if old:
         await old.edit(embed=embed)
@@ -248,6 +251,43 @@ async def post_rules(message: discord.Message, me: discord.ClientUser) -> None:
     else:
         new = await channel.send(embed=embed)
         await message.reply(f"Posted the rules: {new.jump_url}", mention_author=False)
+
+
+# ------------------------------------------------------------------------------------------------------------ about AI
+
+def _page_parts(path: pathlib.Path):
+    """A knowledge page: its '# ' heading becomes the title, '## ' headings become bold lines (embeds have no big
+    headings), and the text is unwrapped."""
+    text = path.read_text(encoding="utf-8")
+    heading = re.match(r"^#\s+(.*)\n", text)
+    title = heading.group(1).strip() if heading else path.stem
+    body = text[heading.end():] if heading else text
+    body = re.sub(r"^##\s+(.*)$", r"**\1**", body, flags=re.M)
+    return title, unwrap(body).strip()
+
+
+async def post_ai_page(message: discord.Message, me: discord.ClientUser) -> None:
+    channel = find_channel(message.guild, ABOUT_CHANNEL)
+    if channel is None:
+        await message.reply(f"I can't find #{ABOUT_CHANNEL}.", mention_author=False)
+        return
+    path = HERE / "knowledge" / "ai.md"
+    if "[Khai" in path.read_text(encoding="utf-8"):
+        await message.reply("knowledge/ai.md still has a [Khai: ...] placeholder - finish it before it goes public.",
+                            mention_author=False)
+        return
+    title, body = _page_parts(path)
+    if len(body) > 4000:
+        await message.reply(f"The page is {len(body)} characters; a post holds 4000. Trim it first.", mention_author=False)
+        return
+    embed = _post_embed(title, link_channels(message.guild, body), "Kaleida - about the project")
+    old = await _own_post(channel, title, me)
+    if old:
+        await old.edit(embed=embed)
+        await message.reply(f"Updated the page: {old.jump_url}", mention_author=False)
+    else:
+        new = await channel.send(embed=embed)
+        await message.reply(f"Posted the page: {new.jump_url}", mention_author=False)
 
 
 # -------------------------------------------------------------------------------------------------------------- role menu
@@ -393,6 +433,7 @@ async def welcome(member: discord.Member) -> None:
         return
     rules = find_channel(member.guild, RULES_CHANNEL)
     text = text.replace("{member}", member.mention).replace("{rules}", rules.mention if rules else f"#{RULES_CHANNEL}")
+    text = link_channels(member.guild, text)
     # Ping only the newcomer, never anyone else the text might name.
     await channel.send(text, allowed_mentions=discord.AllowedMentions(users=[member], everyone=False, roles=False))
 

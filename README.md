@@ -20,7 +20,7 @@ Claude never takes an action itself: it returns a verdict, and `bot.py` decides 
 bans, timeouts capped at 60 minutes, shadow mode).
 
 Staff commands, typed in any channel: `!kaleida help` lists them all - `status` (mode and today's spend), `reload` (after
-editing the `knowledge/` files), `announce`, `devlog`, `post rules`, `post roles`.
+editing the `knowledge/` files), `announce`, `devlog`, `post rules`, `post roles`, `post ai`.
 
 ## Posting
 
@@ -40,6 +40,11 @@ title, the rest is posted exactly as written. Files over 10 MB can't be re-poste
 
 **The rules post.** `!kaleida post rules` posts `knowledge/rules.md` as a styled post in `#welcome-and-rules`. Edit the
 file later and run it again: it updates the same post instead of adding a new one.
+
+**The About AI page.** `knowledge/ai.md` is the public statement on how the project uses AI. `!kaleida post ai` posts it
+in `#about` (create the channel first, read-only for members) and updates the same post when re-run. It refuses while the
+file still holds a `[Khai: ...]` placeholder. Spirekeeper also answers AI questions from this page, briefly, and points to
+`#about`. Any `#channel-name` in a post or an answer becomes a clickable link when that channel exists.
 
 **The role menu.** List the roles members may give themselves in `knowledge/roles.json` (role names exactly as in your
 server, an emoji, one line about each), then `!kaleida post roles` in any channel. It posts buttons in `#roles`; members
@@ -130,6 +135,7 @@ a cheaper model for the moderation pass - that is your call to make.
 | `brain.py` | The Claude side: the two prompts, the structured verdict / answer, the budget guard |
 | `knowledge/rules.md`, `knowledge/faq.md` | What the bot knows. Edit these, then `!kaleida reload` |
 | `knowledge/roles.json`, `knowledge/welcome.md` | The role menu and the welcome text. Edit, then `!kaleida post roles` |
+| `knowledge/ai.md` | The About AI page. Edit, then `!kaleida post ai` (the bot answers from it too) |
 | `.env.example` | Every setting, with comments |
 | `Procfile` | Tells the host how to start the bot |
 

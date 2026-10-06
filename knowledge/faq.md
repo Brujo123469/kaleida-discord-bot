@@ -39,8 +39,10 @@ In #ideas. The developer reads it. Not every idea makes it into the game, but ev
 #devlog has progress posts with clips and screenshots. #announcements has the big news.
 
 ## Does the game use AI?
-[Khai: decide your public statement before launch - for example which tools help with development, and that no
-store-bought assets are fed into generative AI. Until you write it, delete this question so the bot does not answer.]
+Yes, as one tool among many - never as a replacement for artists or for taste. The developer uses an AI coding assistant for code, tools and planning, AI-assisted animation tools, and image-to-3D for a few placeholder models made from their own concept art. Nothing in the project is used to train AI, and bought assets marked "No AI" are never fed into generative AI. The full statement is in #about.
+
+## What about Fab store assets tagged "No AI"?
+Some assets bought on the Fab store carry Fab's "No AI" tag. Those are never fed into generative AI or used to train anything. For specific uses beyond that - for example, an AI coding assistant running Unreal Engine scripts that fit the assets into the game - the developer reaches out to the asset's creator to make sure it's OK first. The full statement is in #about.
 
 ## I found a problem with the bot / a moderation decision.
 Message a moderator. The bot can be wrong; a person always has the final say.

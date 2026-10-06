@@ -28,7 +28,7 @@ load_dotenv()   # before the local imports: posts.py and util.py read their sett
 
 import posts  # noqa: E402
 from brain import Brain  # noqa: E402
-from util import excerpt, find_channel, is_staff  # noqa: E402
+from util import excerpt, find_channel, is_staff, link_channels  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("kaleida.bot")
@@ -239,7 +239,7 @@ async def answer_question(message: discord.Message) -> None:
             return
         result = await brain.answer(question)
     if result and result.get("answerable") and result.get("answer"):
-        text = result["answer"].strip()[:1800]
+        text = link_channels(message.guild, result["answer"].strip()[:1800])
         await message.reply(text + FOOTER, mention_author=False, allowed_mentions=discord.AllowedMentions.none())
     else:
         await message.reply(FOLLOW_UP, mention_author=False)
@@ -251,6 +251,7 @@ HELP = """**Spirekeeper staff commands**
 add `raw` (`!kaleida announce raw ...`) to skip the tidy-up: first line = title, posted as you wrote it, no API cost
 `!kaleida post rules` - post or update the rules post from knowledge/rules.md
 `!kaleida post roles` - post or update the role menu from knowledge/roles.json
+`!kaleida post ai` - post or update the About AI page in #about from knowledge/ai.md
 `!kaleida status` - mode and today's spend
 `!kaleida reload` - re-read the knowledge files after an edit"""
 
@@ -280,6 +281,8 @@ async def staff_command(message: discord.Message) -> bool:
         await posts.post_rules(message, client.user)
     elif verb == "post" and len(words) > 2 and words[2] == "roles":
         await posts.post_roles(message, client.user)
+    elif verb == "post" and len(words) > 2 and words[2] == "ai":
+        await posts.post_ai_page(message, client.user)
     else:
         await message.reply(HELP, mention_author=False)
     return True

@@ -39,3 +39,15 @@ def unwrap(text: str) -> str:
         else:
             out.append(line.rstrip() if stripped else "")
     return "\n".join(out)
+
+
+_CHANNEL_NAME = re.compile(r"(?<![<\w])#([a-z0-9][a-z0-9_-]*)")
+
+
+def link_channels(guild: discord.Guild, text: str) -> str:
+    """Turn plain '#channel-name' text into a clickable channel link, for channels that exist in this server.
+    Unknown names are left as plain text (so '#1' or a hashtag stays as written)."""
+    def swap(match):
+        channel = find_channel(guild, match.group(1))
+        return channel.mention if channel else match.group(0)
+    return _CHANNEL_NAME.sub(swap, text)
