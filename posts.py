@@ -23,7 +23,7 @@ import datetime
 
 import discord
 
-from util import BRAND_COLOR, find_channel, is_staff
+from util import BRAND_COLOR, find_channel, is_staff, unwrap
 
 log = logging.getLogger("kaleida.posts")
 HERE = pathlib.Path(__file__).parent
@@ -233,6 +233,7 @@ async def post_rules(message: discord.Message, me: discord.ClientUser) -> None:
         return
     text = (HERE / "knowledge" / "rules.md").read_text(encoding="utf-8")
     text = re.sub(r"^#\s.*\n+", "", text)   # the file's own heading becomes the post title
+    text = unwrap(text)                      # one line per rule: Discord shows every line break
     embed = _post_embed(RULES_TITLE, text.strip(), "Kaleida - read these before posting")
     old = await _own_post(channel, RULES_TITLE, me)
     if old:
@@ -246,7 +247,16 @@ async def post_rules(message: discord.Message, me: discord.ClientUser) -> None:
 # -------------------------------------------------------------------------------------------------------------- role menu
 
 def _load_roles():
-    return json.loads((HERE / "knowledge" / "roles.json").read_text(encoding="utf-8"))
+    """knowledge/roles.json: {"title", "intro", "groups": [{"heading", "intro", "exclusive", "roles": [{"name", "emoji",
+    "about"}]}]}. An EXCLUSIVE group lets a member hold one of its roles at a time (picking another swaps)."""
+    config = json.loads((HERE / "knowledge" / "roles.json").read_text(encoding="utf-8"))
+    if "groups" not in config:   # the first version's flat list
+        config["groups"] = [{"heading": "", "exclusive": False, "roles": config.get("roles", [])}]
+    return config
+
+
+def _group_of(config, role_name: str):
+    return next((g for g in config["groups"] if any(r.get("name") == role_name for r in g.get("roles", []))), None)
 
 
 def _is_dangerous(role: discord.Role) -> bool:
@@ -264,10 +274,12 @@ class RoleButton(discord.ui.DynamicItem[discord.ui.Button], template=r"kaleida-r
         return cls(int(match["role_id"]))
 
     async def callback(self, interaction: discord.Interaction):
+        """FLOW: 1. re-read roles.json (taking a role out of the file switches its old button off) -> 2. refuse unknown
+        or moderator roles -> 3. toggle; in an exclusive group, adding one removes the member's others."""
         role = interaction.guild.get_role(self.role_id)
-        allowed = {r.get("name") for r in _load_roles().get("roles", [])}
-        # The menu file is re-read on every press, so taking a role out of roles.json switches its old button off.
-        if role is None or role.name not in allowed or _is_dangerous(role):
+        config = _load_roles()
+        group = _group_of(config, role.name) if role else None
+        if role is None or group is None or _is_dangerous(role):
             await interaction.response.send_message("That role isn't self-assignable any more.", ephemeral=True)
             return
         member = interaction.user
@@ -275,9 +287,16 @@ class RoleButton(discord.ui.DynamicItem[discord.ui.Button], template=r"kaleida-r
             if role in member.roles:
                 await member.remove_roles(role, reason="Role menu")
                 await interaction.response.send_message(f"Removed **{role.name}**.", ephemeral=True)
-            else:
-                await member.add_roles(role, reason="Role menu")
-                await interaction.response.send_message(f"Added **{role.name}**.", ephemeral=True)
+                return
+            swapped = []
+            if group.get("exclusive"):
+                names = {r.get("name") for r in group.get("roles", [])} - {role.name}
+                swapped = [r for r in member.roles if r.name in names]
+                if swapped:
+                    await member.remove_roles(*swapped, reason="Role menu (one per group)")
+            await member.add_roles(role, reason="Role menu")
+            note = f" (instead of {', '.join(r.name for r in swapped)})" if swapped else ""
+            await interaction.response.send_message(f"Added **{role.name}**{note}.", ephemeral=True)
         except discord.Forbidden:
             await interaction.response.send_message(
                 "I can't change that role - a moderator needs to put my role above it.", ephemeral=True)
@@ -290,22 +309,42 @@ async def post_roles(message: discord.Message, me: discord.ClientUser) -> None:
         return
     config = _load_roles()
     view = discord.ui.View(timeout=None)
-    lines, problems = [], []
-    for entry in config.get("roles", [])[:25]:
-        role = discord.utils.get(message.guild.roles, name=entry.get("name"))
-        if role is None:
-            problems.append(f"no role named **{entry.get('name')}**")
-            continue
-        if _is_dangerous(role):
-            problems.append(f"**{role.name}** has moderator powers - never self-assignable")
-            continue
-        view.add_item(RoleButton(role.id, role.name, entry.get("emoji")))
-        lines.append(f"{entry.get('emoji', '')} **{role.name}** - {entry.get('about', '')}".strip())
-    if not lines:
+    sections, problems, buttons, row = [], [], 0, 0
+    for group in config["groups"]:
+        lines, row_used = [], 0
+        for entry in group.get("roles", []):
+            role = discord.utils.get(message.guild.roles, name=entry.get("name"))
+            if role is None:
+                problems.append(f"no role named **{entry.get('name')}**")
+                continue
+            if _is_dangerous(role):
+                problems.append(f"**{role.name}** has moderator powers - never self-assignable")
+                continue
+            if buttons == 25 or row > 4:
+                problems.append(f"**{role.name}** - a post holds at most 25 buttons")
+                continue
+            if row_used == 5:      # five buttons to a row; a group never shares a row with the next
+                row, row_used = row + 1, 0
+            if row > 4:
+                problems.append(f"**{role.name}** - out of button rows")
+                continue
+            button = RoleButton(role.id, role.name, entry.get("emoji"))
+            button.item.row = row
+            view.add_item(button)
+            row_used, buttons = row_used + 1, buttons + 1
+            about = unwrap(entry.get("about", "")).strip()
+            lines.append(f"{entry.get('emoji', '')} **{role.name}**" + (f" - {about}" if about else ""))
+        if lines:
+            head = f"**{group['heading']}**\n" if group.get("heading") else ""
+            intro = unwrap(group.get("intro", "")).strip()
+            sections.append(head + (intro + "\n" if intro else "") + "\n".join(l.strip() for l in lines))
+            row += 1
+    if not sections:
         await message.reply("No usable roles in knowledge/roles.json: " + "; ".join(problems), mention_author=False)
         return
     title = config.get("title", "Pick your roles")
-    embed = _post_embed(title, config.get("intro", "") + "\n\n" + "\n".join(lines), "Kaleida - tap again to remove")
+    intro = unwrap(config.get("intro", "")).strip()
+    embed = _post_embed(title, ((intro + "\n\n") if intro else "") + "\n\n".join(sections), "Kaleida - tap again to remove")
     old = await _own_post(channel, title, me)
     if old:
         await old.edit(embed=embed, view=view)
@@ -325,7 +364,7 @@ async def welcome(member: discord.Member) -> None:
     path = HERE / "knowledge" / "welcome.md"
     if channel is None or not path.exists():
         return
-    text = path.read_text(encoding="utf-8").strip()
+    text = unwrap(path.read_text(encoding="utf-8")).strip()
     if not text:
         return
     rules = find_channel(member.guild, RULES_CHANNEL)
