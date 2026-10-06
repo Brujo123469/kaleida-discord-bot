@@ -1,0 +1,9 @@
+{
+  "title": "Pick your roles",
+  "intro": "Tap a button to give yourself a role. Tap it again to remove it.",
+  "roles": [
+    {"name": "Playtester", "emoji": "🧪", "about": "You'd like to playtest - you'll hear first when sign-ups open."},
+    {"name": "Devlog Pings", "emoji": "📜", "about": "Get pinged when a new devlog goes up."},
+    {"name": "Announcement Pings", "emoji": "📣", "about": "Get pinged for big news."}
+  ]
+}

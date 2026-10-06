@@ -13,11 +13,50 @@ An always-on helper for the Kaleida Discord until there are human moderators:
 - **Budget.** It paces itself to `MONTHLY_BUDGET_USD` ($10) a day at a time (~$0.33/day). When the day's share is spent it
   stops calling Claude (Discord's AutoMod keeps working; flagged messages still reach the queue) and resumes the next day.
 
+- **Posts, staff-approved.** Styled announcements and devlogs from your rough notes (preview first, nothing goes public
+  until you press Post), the rules post, a self-assign role menu, and a welcome message. See "Posting" below.
+
 Claude never takes an action itself: it returns a verdict, and `bot.py` decides - with limits it cannot argue past (no
 bans, timeouts capped at 60 minutes, shadow mode).
 
-Staff commands, typed in any channel: `!kaleida status` (mode and today's spend), `!kaleida reload` (after editing the
-`knowledge/` files).
+Staff commands, typed in any channel: `!kaleida help` lists them all - `status` (mode and today's spend), `reload` (after
+editing the `knowledge/` files), `announce`, `devlog`, `post rules`, `post roles`.
+
+## Posting
+
+Every public post is either fixed text you wrote or a draft you approved. Claude never posts on its own.
+
+**Announcements and devlogs.** Type `!kaleida announce` (or `!kaleida devlog`) followed by your rough notes - several
+lines are fine - and attach images or clips to the same message. Best typed in `#mod-queue`; typed anywhere else, the bot
+deletes your command so the notes don't sit in public. Spirekeeper tidies the notes into a clean post (one Claude call,
+about 1-2 cents; it may not add any fact you didn't write) and puts a **preview** in `#mod-queue` with three buttons:
+- **Post** - publishes it to `#announcements` (or `#devlog`) with your images re-attached;
+- **Edit** - opens a box with the title and text so you can change anything, then Post;
+- **Cancel** - drops it.
+
+Add `raw` to skip the tidy-up and the cost: `!kaleida announce raw Demo date` + new line + the text. The first line is the
+title, the rest is posted exactly as written. Files over 10 MB can't be re-posted by a bot - post big clips by hand.
+
+**The rules post.** `!kaleida post rules` posts `knowledge/rules.md` as a styled post in `#welcome-and-rules`. Edit the
+file later and run it again: it updates the same post instead of adding a new one.
+
+**The role menu.** List the roles members may give themselves in `knowledge/roles.json` (role names exactly as in your
+server, an emoji, one line about each), then `!kaleida post roles` in any channel. It posts buttons in `#roles`; members
+tap to add or remove a role. Run it again after editing the file. Safety: only roles in that file, and **never a role with
+moderator powers** (Manage Messages, Kick, Ban, Administrator...) - those are refused even if listed.
+
+**The welcome message.** Off until you turn it on, because it needs one more Discord switch:
+1. Developer Portal -> Spirekeeper -> **Bot** -> switch on **Server Members Intent** -> Save.
+2. Railway -> Variables -> `WELCOME_ON_JOIN` = `1` (and `WELCOME_CHANNEL` if your chat channel isn't `general`).
+Do step 1 first: with the variable on and the switch off, Discord refuses the bot's login. The text is
+`knowledge/welcome.md` (`{member}` = the newcomer, `{rules}` = the rules channel).
+
+**What the bot needs for posting** (Server Settings -> Roles -> Spirekeeper): **Attach Files** and **Manage Roles** on top
+of the original six, and the Spirekeeper role dragged **above** every role in the menu. Channels: `#announcements`,
+`#devlog`, `#roles`, `#welcome-and-rules` (Spirekeeper needs Send Messages there - members don't). Other names can be set
+in the variables (`.env.example`).
+
+**Brand colour.** The colour bar on every post is `BRAND_COLOR` (hex). A placeholder violet until the logo exists.
 
 ## Before it goes live: edit the two knowledge files
 
@@ -84,12 +123,16 @@ a cheaper model for the moderation pass - that is your call to make.
 | File | What it is |
 |---|---|
 | `bot.py` | The Discord side: which messages get read, what happens to a verdict, the queue buttons, the commands |
+| `posts.py` | The posting jobs: drafts and their Post / Edit / Cancel buttons, the rules post, the role menu, the welcome |
+| `util.py` | Small shared helpers: who counts as staff, finding a channel, the brand colour |
 | `brain.py` | The Claude side: the two prompts, the structured verdict / answer, the budget guard |
 | `knowledge/rules.md`, `knowledge/faq.md` | What the bot knows. Edit these, then `!kaleida reload` |
+| `knowledge/roles.json`, `knowledge/welcome.md` | The role menu and the welcome text. Edit, then `!kaleida post roles` |
 | `.env.example` | Every setting, with comments |
 | `Procfile` | Tells the host how to start the bot |
 
 ## Known limits (v1)
-- After a restart, the buttons on OLD `#mod-queue` posts stop working; act on those by hand.
+- Buttons survive restarts (the mod-queue buttons too, since the posting update), but an Edit box left open across a
+  restart has to be reopened.
 - It reads text only - images and attachments are not checked (Discord's AutoMod and explicit-media filter cover those).
 - Messages from established members are read only when someone flags them.
