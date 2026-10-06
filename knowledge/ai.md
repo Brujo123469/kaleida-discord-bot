@@ -15,7 +15,7 @@ This game doesn't get built with only AI. It needs artists, people who share the
 ## The lines I hold
 
 - **Nothing here trains AI.** No one's work in this project, mine or anyone else's, is used to train AI models.
-- **Bought assets marked "No AI" are never fed into generative AI.** AI may only operate the engine on them, the way any script would. When I'm unsure, I ask the creator: two have confirmed in writing that the way I use their work is fine. Where something crossed my own line, I removed or replaced it.
+- **Bought assets marked "No AI" are never fed into generative AI.** AI may only operate the engine on them, the way any script would. When I'm unsure, I ask the creator: two have confirmed in writing that the way I use their work is fine. Where something crossed my own line, I've removed it or I'm replacing it.
 - **Artists' work is protected both ways.** Work I commission is never fed into a generative tool, and I'll ask artists to do the same for anyone else's work.
 
 ## This page will change
